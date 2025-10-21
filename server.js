@@ -13,7 +13,9 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/token", (req, res) => {
-  const { identity, room } = req.query;
+  const identity = req.query.identity || req.query.username;
+  const room = req.query.room;
+
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
