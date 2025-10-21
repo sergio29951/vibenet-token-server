@@ -1,45 +1,37 @@
 import express from "express";
-import cors from "cors";
 import { AccessToken } from "livekit-server-sdk";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
-
-// 🔐 LiveKit keys (devkey + secret dal tuo livekit.yaml)
-const apiKey = "devkey";
-const apiSecret = "3fcb8a1bdf87236efce9819e47db1cae";
+const port = process.env.PORT || 3000;
 
 app.get("/token", (req, res) => {
   const { identity, room } = req.query;
 
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+
+  if (!apiKey || !apiSecret) {
+    return res.status(400).json({ error: "api-key and api-secret must be set" });
+  }
+
   if (!identity || !room) {
-    return res.status(400).json({ error: "Devi specificare sia identity che room" });
+    return res.status(400).json({ error: "Missing identity or room" });
   }
 
   try {
-    const token = new AccessToken({
-      apiKey,
-      apiSecret,
-      identity,
-      ttl: 3600,
-    });
-
-    token.addGrant({
-      room,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-    });
-
-    const jwt = token.toJwt();
-    console.log(`🎟️ Token generato per ${identity} → stanza: ${room}`);
-    res.json({ token: jwt });
+    const at = new AccessToken(apiKey, apiSecret, { identity });
+    at.addGrant({ room, roomJoin: true });
+    const token = at.toJwt();
+    res.json({ token });
   } catch (err) {
-    console.error("❌ Errore generazione token:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Errore generazione token:", err);
+    res.status(500).json({ error: "Errore generazione token" });
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Server attivo su http://localhost:${PORT}`));
+app.listen(port, () => {
+  console.log(`✅ Token server in ascolto sulla porta ${port}`);
+});
